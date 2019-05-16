@@ -140,7 +140,7 @@ export default {
     },
 
     textPart(r) {
-      return [...this.text].slice(r.start_offset, r.end_offset).join('');
+      return this.text.slice(r.start_offset, r.end_offset);
     },
 
     addLabel(labelId) {
