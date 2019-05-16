@@ -5,20 +5,26 @@ block annotation-area
   div.card
     header.card-header
       div.card-header-title.has-background-royalblue
-        div.field.is-grouped.is-grouped-multiline
-          div.control(v-for="label in labels")
-            div.tags.has-addons
-              a.tag.is-medium(
-                v-shortkey.once="replaceNull(shortcutKey(label))"
-                v-bind:style="{ \
-                  color: label.text_color, \
-                  backgroundColor: label.background_color \
-                }"
-                v-on:click="annotate(label.id)"
-                v-on:shortkey="annotate(label.id)"
-              ) {{ label.text }}
-              span.tag.is-medium
-                kbd {{ shortcutKey(label) | simpleShortcut }}
+        div.content
+          div.field
+            input.input(
+              placeholder="Search label"
+              type="text"
+            )
+          div.field.is-grouped.is-grouped-multiline
+            div.control(v-for="label in labels")
+              div.tags.has-addons
+                a.tag.is-medium(
+                  v-shortkey.once="replaceNull(shortcutKey(label))"
+                  v-bind:style="{ \
+                    color: label.text_color, \
+                    backgroundColor: label.background_color \
+                  }"
+                  v-on:click="annotate(label.id)"
+                  v-on:shortkey="annotate(label.id)"
+                ) {{ label.text }}
+                span.tag.is-medium
+                  kbd {{ shortcutKey(label) | simpleShortcut }}
 
     div.card-content
       div.content(v-if="docs[pageNumber] && annotations[pageNumber]")
