@@ -1,14 +1,14 @@
 <template lang="pug">
   div(@click="setSelectedRange")
     span.text-sequence(
-      v-for="r in chunksWithLabel"
-      v-bind:class="{ tag: id2label[r.label].text_color }"
+      v-for="r in chunks"
+      v-bind:class="{ tag: id2label(r.label).text_color }"
       v-bind:style="{ \
-        color: id2label[r.label].text_color, \
-        backgroundColor: id2label[r.label].background_color \
+        color: id2label(r.label).text_color, \
+        backgroundColor: id2label(r.label).background_color \
       }"
     ) {{ textPart(r) }}
-      button.delete.is-small(v-if="id2label[r.label].text_color", v-on:click="removeLabel(r)")
+      button.delete.is-small(v-if="id2label(r.label).text_color", v-on:click="removeLabel(r)")
 </template>
 
 <script>
@@ -56,24 +56,6 @@ export default {
 
       return res;
     },
-
-    chunksWithLabel() {
-      return this.chunks.filter(r => this.id2label[r.label]);
-    },
-
-    id2label() {
-      const id2label = {};
-      // default value;
-      id2label[-1] = {
-        text_color: '',
-        background_color: '',
-      };
-      for (let i = 0; i < this.labels.length; i++) {
-        const label = this.labels[i];
-        id2label[label.id] = label;
-      }
-      return id2label;
-    },
   },
 
   watch: {
@@ -83,6 +65,16 @@ export default {
   },
 
   methods: {
+    id2label(id) {
+      return id !== -1 ? {
+        text_color: '#ffffff',
+        background_color: '#209cee',
+      } : {
+        text_color: '',
+        background_color: '',
+      };
+    },
+
     setSelectedRange() {
       let start;
       let end;
