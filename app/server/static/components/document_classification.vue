@@ -4,21 +4,14 @@ extends ./annotation.pug
 block annotation-area
   div.card
     header.card-header
-      div.card-header-title.has-background-royalblue
-        div.field.is-grouped.is-grouped-multiline
-          div.control(v-for="label in labels")
+      div.card-header-title.has-background-royalblue(style={flexDirection: 'column'})
+        div.field.is-grouped.is-grouped-multiline(
+          style={paddingBottom: '20px'}
+          v-for="labelsGroup in getLabelsToPresent()"
+        )
+          div.control(v-for="label in labelsGroup")
             div.tags.has-addons
-              a.tag.is-medium(
-                v-shortkey.once="replaceNull(shortcutKey(label))"
-                v-bind:style="{ \
-                  color: label.text_color, \
-                  backgroundColor: label.background_color \
-                }"
-                v-on:click="addLabel(label)"
-                v-on:shortkey="addLabel(label)"
-              ) {{ label.text }}
-              span.tag.is-medium
-                kbd {{ shortcutKey(label) | simpleShortcut }}
+              a.tag.is-medium(v-on:click="addLabel(label)") {{ getLabelText(label) }}
 
     div.card-content
       div.field.is-grouped.is-grouped-multiline
@@ -57,9 +50,58 @@ export default {
 
   mixins: [annotationMixin],
 
+  data() {
+    return {
+      labelPath: [],
+    };
+  },
+
   methods: {
     getAnnotation(label) {
       return this.annotations[this.pageNumber].find(annotation => annotation.label === label.id);
+    },
+
+    getLabelText(label) {
+      const splitLabel = label.split('/');
+
+      return splitLabel[splitLabel.length - 1];
+    },
+
+    getSplitLabels() {
+      return this.labels.map(label => label.text.split('/'));
+    },
+
+    isLabelAtPath(splitLabel, path) {
+      return path.every((pathComponent, index) => splitLabel[index] === pathComponent);
+    },
+
+    getPossibleLabelHeadsAtPath(path) {
+      const possibleSplitLabels = this.getSplitLabels().filter(
+        splitLabel => this.isLabelAtPath(splitLabel, path),
+      );
+      const possibleLabelHeads = possibleSplitLabels.map(splitLabel => splitLabel.slice(0, path.length + 1).join('/'));
+
+      return [...new Set(possibleLabelHeads)];
+    },
+
+    getLabelsToPresent() {
+      return this.labelPath.reduce(
+        ({ previousLabelsToPresent, previousPath }, pathComponent) => {
+          const path = [...previousPath, pathComponent];
+
+          return {
+            previousLabelsToPresent: [
+              ...previousLabelsToPresent,
+              this.getPossibleLabelHeadsAtPath(path),
+            ],
+            previousPath: path,
+          };
+        },
+        {
+          previousLabelsToPresent: [this.getPossibleLabelHeadsAtPath([])],
+          previousPath: [],
+        },
+      ).previousLabelsToPresent;
     },
 
     async submit() {
@@ -70,17 +112,24 @@ export default {
     },
 
     async addLabel(label) {
-      const annotation = this.getAnnotation(label);
-      if (annotation) {
-        this.removeLabel(annotation);
+      const labelDescriptor = this.labels.find(({ text }) => text === label);
+
+      if (labelDescriptor) {
+        const annotation = this.getAnnotation(label);
+
+        if (annotation) {
+          this.removeLabel(annotation);
+        } else {
+          const docId = this.docs[this.pageNumber].id;
+          const payload = {
+            label: labelDescriptor.id,
+          };
+          await HTTP.post(`docs/${docId}/annotations`, payload).then((response) => {
+            this.annotations[this.pageNumber].push(response.data);
+          });
+        }
       } else {
-        const docId = this.docs[this.pageNumber].id;
-        const payload = {
-          label: label.id,
-        };
-        await HTTP.post(`docs/${docId}/annotations`, payload).then((response) => {
-          this.annotations[this.pageNumber].push(response.data);
-        });
+        this.labelPath = label.split('/');
       }
     },
   },
