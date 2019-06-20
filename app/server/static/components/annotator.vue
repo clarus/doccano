@@ -1,15 +1,11 @@
 <template lang="pug">
   div(@click="setSelectedRange")
     span.text-sequence(
-      v-for="r in chunksWithLabel"
-      v-bind:class="getChunkClass(r)"
-      v-bind:data-tooltip="id2label[r.label].text"
-      v-bind:style="{ \
-        color: id2label[r.label].text_color, \
-        backgroundColor: id2label[r.label].background_color \
-      }"
-    ) {{ textPart(r) }}
-      button.delete.is-small(v-if="id2label[r.label].text_color", v-on:click="removeLabel(r)")
+      v-for="chunk in chunksWithLabel"
+      v-bind:class="getChunkClass(rchunk)"
+      v-bind:style="getChunkStyle(chunk)"
+    ) {{ textPart(chunk) }}
+      button.delete.is-small(v-if="id2label[chunk.label].text_color", v-on:click="removeLabel(chunk)")
 </template>
 
 <script>
@@ -96,6 +92,15 @@ export default {
       ];
     },
 
+    getChunkStyle(chunk) {
+      const label = this.id2label[chunk.label];
+
+      return {
+        color: label.text_color,
+        backgroundColor: label.background_color + (chunk.manual ? 'ff' : '80')
+      };
+    },
+
     setSelectedRange() {
       let start;
       let end;
@@ -162,6 +167,7 @@ export default {
           start_offset: this.startOffset,
           end_offset: this.endOffset,
           label: labelId,
+          manual: true,
         };
         this.$emit('add-label', label);
       }
