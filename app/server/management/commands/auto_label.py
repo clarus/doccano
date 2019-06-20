@@ -59,6 +59,9 @@ class Command(BaseCommand):
         project = Project.objects.get(pk=project_id)
         docs = Document.objects.filter(project_id=project_id)
 
+        # remove existing non-manual annotations
+        SequenceAnnotation.objects.filter(manual=False).delete()
+
         # keep track of next label color, next label shortcut
         labels_created = 0
         next_color = SOME_COLORS_TO_CHOOSE_FROM[labels_created]
