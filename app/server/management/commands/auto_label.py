@@ -1,7 +1,8 @@
 from django.core.management.base import BaseCommand, CommandError
+from django.db.utils import IntegrityError
 from server.models import (Document, Project, Label,
                           SequenceAnnotation, User)
-import en_core_web_md
+import en_core_web_sm
 import string
 
 # if we want to add new labels, decide on some new colors for them
@@ -18,19 +19,19 @@ def get_new_shortcut(proj_id):
     to add a new label
     """
     labels = Label.objects.filter(project_id=proj_id)
-    existing = set([label.shortcut for label in labels])
+    existing = set([label.suffix_key for label in labels])
     kc = set(string.ascii_lowercase)
     diff = kc - existing
-    return list(diff)[0]
+    return min(list(diff))
 
 
 def load_model(model_str):
     """
     Loads a model given an input string (could work differently)
     """
-    if model_str == "en_core_web_md":
-        import en_core_web_md
-        model_func = en_core_web_md.load()
+    if model_str == "en_core_web_sm":
+        import en_core_web_sm
+        model_func = en_core_web_sm.load()
     if model_str == "seed_data":
         pass
     return model_func
@@ -41,7 +42,7 @@ class Command(BaseCommand):
 
     def add_arguments(self, parser):
         parser.add_argument('project_id', type=int)
-        parser.add_argument('model_str', default='en_core_web_md')
+        parser.add_argument('model_str', default='en_core_web_sm')
 
     def handle(self, *args, **options):
         """
@@ -57,8 +58,7 @@ class Command(BaseCommand):
         print("model loaded")
         project = Project.objects.get(pk=project_id)
         docs = Document.objects.filter(project_id=project_id)
-        docs = docs[:2]
-        
+
         # keep track of next label color, next label shortcut
         labels_created = 0
         next_color = SOME_COLORS_TO_CHOOSE_FROM[labels_created]
@@ -69,16 +69,27 @@ class Command(BaseCommand):
                 elabel = ent.label_
                 estart = ent.start_char
                 eend = ent.end_char
-                proj_label, created = Label.objects.get_or_create(text=elabel,
-                                                                  project=project,
-                                                                  defaults={'background_color': next_color,
-                                                                            'shortcut': next_short})
+                proj_label, created = Label.objects.get_or_create(
+                    text=elabel,
+                    project=project,
+                    defaults={
+                        'background_color': next_color,
+                        'suffix_key': next_short
+                    }
+                )
                 # keep track of next label color, next label shortcut
                 if created:
                     labels_created = (labels_created + 1) % len(SOME_COLORS_TO_CHOOSE_FROM)
                     next_color = SOME_COLORS_TO_CHOOSE_FROM[labels_created]
                     next_short = get_new_shortcut(project_id)
-                seq_ann_args = dict(document=doc, user=user, 
-                                    label=proj_label, start_offset=estart,
-                                    end_offset=eend, manual=False)
-                ann, c = SequenceAnnotation.objects.get_or_create(**seq_ann_args)
+                try:
+                    SequenceAnnotation.objects.create(
+                        document=doc,
+                        user=user, 
+                        label=proj_label,
+                        start_offset=estart,
+                        end_offset=eend,
+                        manual=False
+                    )
+                except IntegrityError:
+                    pass
