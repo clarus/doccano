@@ -4,8 +4,12 @@
       v-for="chunk in chunksWithLabel"
       v-bind:class="getChunkClass(rchunk)"
       v-bind:style="getChunkStyle(chunk)"
+      v-on:click="validateLabel(chunk)"
     ) {{ textPart(chunk) }}
-      button.delete.is-small(v-if="id2label[chunk.label].text_color", v-on:click="removeLabel(chunk)")
+      button.delete.is-small(
+        v-if="id2label[chunk.label].text_color"
+        v-on:click="removeLabel(chunk)"
+      )
 </template>
 
 <script>
@@ -96,8 +100,9 @@ export default {
       const label = this.id2label[chunk.label];
 
       return {
+        backgroundColor: label.background_color + (label.background_color && !chunk.manual ? '80' : ''),
         color: label.text_color,
-        backgroundColor: label.background_color + (chunk.manual ? 'ff' : '80')
+        ...(label.background_color && !chunk.manual ? { border: '2px solid red', cursor: 'pointer' } : {}),
       };
     },
 
@@ -173,8 +178,14 @@ export default {
       }
     },
 
-    removeLabel(index) {
-      this.$emit('remove-label', index);
+    removeLabel(chunk) {
+      this.$emit('remove-label', chunk);
+    },
+
+    validateLabel(chunk) {
+      if (chunk.id && !chunk.manual) {
+        this.$emit('validate-label', chunk);
+      }
     },
 
     makeLabel(startOffset, endOffset) {

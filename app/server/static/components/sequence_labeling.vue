@@ -27,6 +27,7 @@ block annotation-area
           v-bind:entity-positions="annotations[pageNumber]"
           v-bind:text="docs[pageNumber].text"
           v-on:remove-label="removeLabel"
+          v-on:validate-label="validateLabel"
           v-on:add-label="addLabel"
           ref="annotator"
         )
@@ -61,6 +62,16 @@ export default {
       HTTP.post(`docs/${docId}/annotations`, annotation).then((response) => {
         this.annotations[this.pageNumber].push(response.data);
       });
+    },
+
+    async validateLabel(annotation) {
+      const docId = this.docs[this.pageNumber].id;
+      const { data: newAnnotation } = await HTTP.patch(`docs/${docId}/annotations/${annotation.id}`, { manual: true });
+      const index = this.annotations[this.pageNumber].indexOf(annotation);
+      this.annotations[this.pageNumber][index] = Object.assign(
+        this.annotations[this.pageNumber][index],
+        newAnnotation,
+      );
     },
 
     async submit() {
