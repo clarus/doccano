@@ -2,8 +2,9 @@
   div(@click="setSelectedRange")
     span.text-sequence(
       v-for="chunk in chunksWithLabel"
-      v-bind:class="getChunkClass(rchunk)"
+      v-bind:class="getChunkClass(chunk)"
       v-bind:style="getChunkStyle(chunk)"
+      v-bind:data-tooltip="id2label[chunk.label].text"
       v-on:click="validateLabel(chunk)"
     ) {{ textPart(chunk) }}
       button.delete.is-small(
@@ -84,6 +85,10 @@ export default {
   },
 
   methods: {
+    isSuggestedChunk(chunk) {
+      return chunk.id && !chunk.manual;
+    },
+
     getChunkClass(chunk) {
       if (!chunk.id) {
         return {};
@@ -100,9 +105,9 @@ export default {
       const label = this.id2label[chunk.label];
 
       return {
-        backgroundColor: label.background_color + (label.background_color && !chunk.manual ? '80' : ''),
+        backgroundColor: label.background_color,
         color: label.text_color,
-        ...(label.background_color && !chunk.manual ? { border: '2px solid red', cursor: 'pointer' } : {}),
+        ...(this.isSuggestedChunk(chunk) ? { border: '6px solid red', cursor: 'pointer' } : {}),
       };
     },
 
@@ -162,8 +167,8 @@ export default {
       this.endOffset = 0;
     },
 
-    textPart(r) {
-      return [...this.text].slice(r.start_offset, r.end_offset).join('');
+    textPart(chunk) {
+      return this.text.substring(chunk.start_offset, chunk.end_offset);
     },
 
     addLabel(labelId) {
@@ -183,7 +188,7 @@ export default {
     },
 
     validateLabel(chunk) {
-      if (chunk.id && !chunk.manual) {
+      if (this.isSuggestedChunk(chunk)) {
         this.$emit('validate-label', chunk);
       }
     },

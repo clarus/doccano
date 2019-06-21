@@ -3,6 +3,7 @@ from django.db.utils import IntegrityError
 from server.models import (Document, Project, Label,
                           SequenceAnnotation, User)
 import en_core_web_sm
+import random
 import string
 
 # if we want to add new labels, decide on some new colors for them
@@ -62,13 +63,30 @@ class Command(BaseCommand):
         # remove existing non-manual annotations
         SequenceAnnotation.objects.filter(manual=False).delete()
 
-        # keep track of next label color, next label shortcut
+        # train the model based on existing annotations
+        print('starting training')
+        optimizer = nlp_model.begin_training()
+        for i in range(10):
+            print('step', i)
+            shuffled_docs = list(docs)
+            random.shuffle(shuffled_docs)
+            for doc in shuffled_docs:
+                annotations = SequenceAnnotation.objects.filter(document=doc, user=user)
+                entities = [(annotation.start_offset, annotation.end_offset, annotation.label.text) for annotation in annotations]
+                if entities:
+                    nlp_model.update([doc.text], [{'entities': entities}], sgd=optimizer)
+        print('training finished')
+
+        # generate annotations
+        # we keep track of next label color, next label shortcut
         labels_created = 0
+        nb_inferred_annotations = 0
         next_color = SOME_COLORS_TO_CHOOSE_FROM[labels_created]
         next_short = get_new_shortcut(project_id)
         for doc in docs:
             parsed = nlp_model(doc.text)
             for ent in parsed.ents:
+                nb_inferred_annotations += 1
                 elabel = ent.label_
                 estart = ent.start_char
                 eend = ent.end_char
@@ -96,3 +114,4 @@ class Command(BaseCommand):
                     )
                 except IntegrityError:
                     pass
+        print('number of inferred annotations', nb_inferred_annotations)
