@@ -1,8 +1,8 @@
 from django.core.management.base import BaseCommand, CommandError
 from django.db.utils import IntegrityError
-from server.models import (Document, Project, Label,
+from api.models import (Document, Project, Label,
                           SequenceAnnotation, User)
-import en_core_web_sm
+import spacy
 import random
 import string
 
@@ -30,12 +30,7 @@ def load_model(model_str):
     """
     Loads a model given an input string (could work differently)
     """
-    if model_str == "en_core_web_sm":
-        import en_core_web_sm
-        model_func = en_core_web_sm.load()
-    if model_str == "seed_data":
-        pass
-    return model_func
+    return spacy.load(model_str)
 
 
 class Command(BaseCommand):
